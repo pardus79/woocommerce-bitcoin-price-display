@@ -124,7 +124,7 @@ public function settings_page() {
                     <th scope="row">Display Bitcoin Only</th>
                     <td>
                         <input type="checkbox" name="wc_bitcoin_price_display_bitcoin_only" value="1" <?php checked(1, get_option('wc_bitcoin_price_display_bitcoin_only'), true); ?> />
-                        <label for="wc_bitcoin_price_display_bitcoin_only">Hide USD prices and show only Bitcoin prices</label>
+                        <label for="wc_bitcoin_price_display_bitcoin_only">Hide FIAT prices and show only Bitcoin prices</label>
                     </td>
                 </tr>
                 <tr valign="top">
@@ -211,7 +211,7 @@ public function add_price_toggle() {
     $bitcoin_only = get_option('wc_bitcoin_price_display_bitcoin_only', false);
     if (!$bitcoin_only && (is_woocommerce() || is_cart() || is_checkout() || is_product() || is_shop() || is_front_page())) {
         $current_display = $this->get_current_price_display();
-        $button_text = $current_display === 'bitcoin' ? 'Show USD' : 'Show Bitcoin';
+        $button_text = $current_display === 'bitcoin' ? 'Show EUR' : 'Show Bitcoin';
         ?>
         <div id="price-display-toggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
             <button id="toggle-price-display" class="bitcoin-toggle-btn"><?php echo esc_html($button_text); ?></button>
@@ -224,7 +224,7 @@ public function ajax_toggle_price_display() {
     $current_display = isset($_SESSION['price_display']) ? $_SESSION['price_display'] : 'bitcoin';
     $new_display = ($current_display === 'bitcoin') ? 'usd' : 'bitcoin';
     $_SESSION['price_display'] = $new_display;
-    $button_text = $new_display === 'bitcoin' ? 'Show USD' : 'Show Bitcoin';
+    $button_text = $new_display === 'bitcoin' ? 'Show EUR' : 'Show Bitcoin';
     
     // Ensure the session is written
     if (session_status() === PHP_SESSION_ACTIVE) {
@@ -243,7 +243,7 @@ public function ajax_toggle_price_display() {
             return $cached_rate;
         }
 
-        $url = "{$this->btcpay_server}/api/v1/stores/{$this->store_id}/rates?currencyPair=BTC_USD";
+        $url = "{$this->btcpay_server}/api/v1/stores/{$this->store_id}/rates?currencyPair=BTC_EUR";
         
         $args = array(
             'headers' => array(
