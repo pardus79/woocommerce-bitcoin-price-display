@@ -1,18 +1,23 @@
 jQuery(document).ready(function($) {
     var currentDisplay = bitcoinPriceData.initialDisplay;
-    var bitcoinOnly = bitcoinPriceData.bitcoinOnly;
+    var displayMode = bitcoinPriceData.displayMode;
 
     function updatePriceDisplay(display) {
-        if (bitcoinOnly || display === 'bitcoin') {
-            $('.price-wrapper .usd-price').hide();
+        if (displayMode === 'toggle') {
+            if (display === 'bitcoin') {
+                $('.price-wrapper .original-price').hide();
+                $('.price-wrapper .bitcoin-price').show();
+            } else {
+                $('.price-wrapper .original-price').show();
+                $('.price-wrapper .bitcoin-price').hide();
+            }
+            
+            $('#toggle-price-display').text(display === 'bitcoin' ? 'Show Original' : 'Show Bitcoin');
+        } else if (displayMode === 'bitcoin_only') {
+            $('.price-wrapper .original-price').hide();
             $('.price-wrapper .bitcoin-price').show();
-        } else {
-            $('.price-wrapper .usd-price').show();
-            $('.price-wrapper .bitcoin-price').hide();
-        }
-        
-        if (!bitcoinOnly) {
-            $('#toggle-price-display').text(display === 'usd' ? 'Show Bitcoin' : 'Show USD');
+        } else if (displayMode === 'side_by_side') {
+            $('.price-wrapper .original-price, .price-wrapper .bitcoin-price').show();
         }
         
         currentDisplay = display;
@@ -26,13 +31,29 @@ jQuery(document).ready(function($) {
     // Set initial state and apply to all elements
     applyPriceDisplay();
 
-    // Handle toggle button click (only if not Bitcoin-only)
-    if (!bitcoinOnly) {
+    // Handle toggle button click (only if display mode is 'toggle')
+    if (displayMode === 'toggle') {
         $(document).on('click', '#toggle-price-display', function(e) {
             e.preventDefault();
-            var newDisplay = currentDisplay === 'bitcoin' ? 'usd' : 'bitcoin';
+            var newDisplay = currentDisplay === 'bitcoin' ? 'original' : 'bitcoin';
             updatePriceDisplay(newDisplay);
             $(document.body).trigger('update_checkout');
+
+            // AJAX call to update server-side session
+            $.ajax({
+                url: bitcoinPriceData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'toggle_price_display',
+                    nonce: bitcoinPriceData.nonce,
+                    display: newDisplay
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#toggle-price-display').text(response.data.button_text);
+                    }
+                }
+            });
         });
     }
 
