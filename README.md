@@ -2,13 +2,13 @@
 
 This WordPress/WooCommerce plugin integrates with BTCPay Server to display product prices in Bitcoin satoshis (sats) alongside the default currency.
 
-CURRENTLY ONLY SUPPORTS USD/BTC CONVERSION. MULTI-CURRENCY SOON!
-
 ## Features
 
 - Periodically pulls exchange rate data from your BTCPay Server every 10 minutes
 - Displays product prices in sats throughout your WooCommerce store
 - Button to allow customers to toggle USD price display (There's a setting to disable this)
+- Detects your store's set currency and converts appropriately
+- Can display currency and Sats prices side-by-side
 
 ## Requirements
 
@@ -41,7 +41,7 @@ CURRENTLY ONLY SUPPORTS USD/BTC CONVERSION. MULTI-CURRENCY SOON!
      - Click "Generate API Key" button at bottom
      - Back on the "API Keys" screen, click the "Reveal" link next to the labled key you just made
      - Copy/Paste that key into the "API Key" in the plug-in
-5. Mark "Display Bitcoin Only" to hide USD prices in your store (optional)
+5. Choose to display prices only in Bitcoin, side-by-side with fiat currency, or enable a toggle button to switch between them
 6. Set "Rounding" to set if your store will display prices rounded to the nearest 1,000 Sats, 100 Sats, 10 or 1
 7. Save Changes
 
