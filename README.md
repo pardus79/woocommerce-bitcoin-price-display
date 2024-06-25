@@ -2,6 +2,8 @@
 
 This WordPress/WooCommerce plugin integrates with BTCPay Server to display product prices in Bitcoin satoshis (sats) alongside the default currency.
 
+Forked from original and changed some values to convert and display prices based on EURO instead of USD
+
 ## Features
 
 - Periodically pulls exchange rate data from your BTCPay Server every 10 minutes
