@@ -12,7 +12,7 @@ jQuery(document).ready(function($) {
         }
         
         if (!bitcoinOnly) {
-            $('#toggle-price-display').text(display === 'usd' ? 'Show Bitcoin' : 'Show USD');
+            $('#toggle-price-display').text(display === 'usd' ? 'Show Bitcoin' : 'Show EUR');
         }
         
         currentDisplay = display;
@@ -30,7 +30,7 @@ jQuery(document).ready(function($) {
     if (!bitcoinOnly) {
         $(document).on('click', '#toggle-price-display', function(e) {
             e.preventDefault();
-            var newDisplay = currentDisplay === 'bitcoin' ? 'usd' : 'bitcoin';
+            var newDisplay = currentDisplay === 'bitcoin' ? 'eur' : 'bitcoin';
             updatePriceDisplay(newDisplay);
             $(document.body).trigger('update_checkout');
         });
