@@ -1,0 +1,10 @@
+.woocommerce-Price-amount {
+    display: inline-block;
+}
+.bitcoin-toggle-btn {
+    cursor: pointer;
+}
+.price-wrapper .usd-price,
+.price-wrapper .bitcoin-price {
+    display: none;
+}
