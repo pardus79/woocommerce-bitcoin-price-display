@@ -26,7 +26,7 @@ This WordPress/WooCommerce plugin integrates with BTCPay Server to display produ
 ## Configuration
 
 1. Enter BTCPay Server Address
-     - URL of your BTCPay Server i.e. `https://https://btcpay.example.com`
+     - URL of your BTCPay Server i.e. `https://btcpay.example.com`
 2. Enter Store ID
      - Login to your BTCPay Server
      - Go to Settings > General and copy the string in "Store ID"
