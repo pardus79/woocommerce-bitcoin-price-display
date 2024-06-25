@@ -66,6 +66,6 @@ This project is licensed under [The Unlicense](LICENSE).
 
 ## Thank you!
 
-If you find this plug-in useful and want to send a few sats my way, my lightning address is btcpins@lnbits.btcpins.com
+If you find this plug-in useful and want to send a few sats my way, my lightning address is btcpins@btcpay0.voltageapp.io
 
 I encourage you to support the REAL devs by donating some Bitcoin to [OpenSats](https://opensats.org/). That money will help support further development of BTCPay Server as well as many other Bitcoin and privacy-enabling projects.
