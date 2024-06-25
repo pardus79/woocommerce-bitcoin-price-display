@@ -12,7 +12,7 @@ jQuery(document).ready(function($) {
         }
         
         if (!bitcoinOnly) {
-            $('#toggle-price-display').text(display === 'usd' ? 'Show Bitcoin' : 'Show EUR');
+            $('#toggle-price-display').text(display === 'eur' ? 'Show Bitcoin' : 'Show EUR');
         }
         
         currentDisplay = display;
