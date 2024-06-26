@@ -1,10 +1,21 @@
-.woocommerce-Price-amount {
-    display: inline-block;
+.wc-bitcoin-price {
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+    font-size: inherit !important;
 }
-.bitcoin-toggle-btn {
-    cursor: pointer;
+
+.wc-bitcoin-price .bitcoin-amount {
+    display: inline-flex !important;
+    align-items: center !important;
+    vertical-align: middle !important;
+    font-size: inherit !important;
 }
-.price-wrapper .usd-price,
-.price-wrapper .bitcoin-price {
-    display: none;
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .wc-bitcoin-price {
+        font-size: 0.9em !important;
+    }
 }
