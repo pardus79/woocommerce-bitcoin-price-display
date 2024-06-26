@@ -6,9 +6,10 @@ This WordPress/WooCommerce plugin integrates with BTCPay Server to display produ
 
 - Periodically pulls exchange rate data from your BTCPay Server every 10 minutes
 - Displays product prices in sats throughout your WooCommerce store
-- Button to allow customers to toggle USD price display (There's a setting to disable this)
+- Button to allow customers to toggle USD price display (If enabled)
 - Detects your store's set currency and converts appropriately
-- Can display currency and Sats prices side-by-side
+- Can display currency and Sats prices together in several formats
+- Ability to add text before & after the sats amount, as well as a Font Awesome icon before that.
 
 ## Requirements
 
@@ -16,6 +17,7 @@ This WordPress/WooCommerce plugin integrates with BTCPay Server to display produ
 - WooCommerce
 - BTCPay Server instance with API access
 - PHP
+- Font Awesome Plugin (optional, for additional customization)
 
 ## Installation
 
@@ -41,13 +43,15 @@ This WordPress/WooCommerce plugin integrates with BTCPay Server to display produ
      - Click "Generate API Key" button at bottom
      - Back on the "API Keys" screen, click the "Reveal" link next to the labled key you just made
      - Copy/Paste that key into the "API Key" in the plug-in
-5. Choose to display prices only in Bitcoin, side-by-side with fiat currency, or enable a toggle button to switch between them
+5. Choose to display prices only in Bitcoin, both Bitcoin & Fiat currency, or enable a toggle button to switch between them
+	If Both Prices is chosen, then set the Both Prices Display Option to choose between side-by-side or above/below layout
 6. Set "Rounding" to set if your store will display prices rounded to the nearest 1,000 Sats, 100 Sats, 10 or 1
-7. Save Changes
+7. OPTIONAL - Set Prefix/Suffix text to display before/after the sats price. Set Font Awesome Icon to show before sats price & text (requires Font Awesome Plugin)
+8. Save Changes
 
 ## Usage
 
-Once configured, the plugin will automatically display Sats prices by default. Customers may toggle back to USD prices, if not disabled.
+Once configured, the plugin will automatically display Sats prices by default. Customers may toggle back to USD prices, if enabled.
 
 ## Support
 
