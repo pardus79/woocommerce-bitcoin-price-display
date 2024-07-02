@@ -49,6 +49,14 @@ This WordPress/WooCommerce plugin integrates with BTCPay Server to display produ
 
 Once configured, the plugin will automatically display Sats prices by default. Customers may toggle back to USD prices, if not disabled.
 
+## To-Do
+
+- [ ] Support for variable-price products
+- [ ] Sats price to reflect discounts for Bitcoin payments
+- [ ] Display converted fiat price if store currency is BTC/SAT
+- [ ] Customizable prefix/suffix text before/after Sats amount
+- [ ] Font Awesome support for currency icons
+
 ## Support
 
 For bug reports or feature requests, please open an issue on GitHub.
