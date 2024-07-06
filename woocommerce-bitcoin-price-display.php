@@ -668,12 +668,25 @@ class WC_Bitcoin_Price_Display {
         return $tax_totals_html;
     }
 
-    public function add_bitcoin_to_price_including_tax($price_html, $product) {
+public function add_bitcoin_to_price_including_tax($price_html, $product) {
+    if (!$product || !is_a($product, 'WC_Product')) {
+        return $price_html; // Return original price if product is invalid
+    }
+
+    try {
         $price = wc_get_price_including_tax($product);
+        if ($price === false || $price === '') {
+            return $price_html; // Return original price if unable to get price
+        }
+        
         $sats = $this->convert_to_sats($price);
         $bitcoin_price = $this->format_sats($sats);
         return $this->format_price($price, $bitcoin_price);
+    } catch (Exception $e) {
+        error_log('Error in add_bitcoin_to_price_including_tax: ' . $e->getMessage());
+        return $price_html; // Return original price on error
     }
+}
 
     public function add_bitcoin_total($total) {
         // Get the total in the shop's current currency
