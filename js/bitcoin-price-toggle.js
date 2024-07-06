@@ -7,48 +7,51 @@ jQuery(document).ready(function($) {
     var faIconColor = bitcoinPriceData.faIconColor;
     var faIconAnimation = bitcoinPriceData.faIconAnimation;
 
-	function formatBitcoinPrice(price) {
-		// Remove any existing formatting
-		price = price.replace(/[^\d]/g, '');
-		// Apply new formatting
+	function formatBitcoinPrice(priceElement) {
+		var $element = $(priceElement);
+		var price = $element.data('sats');
+		var suffix = $element.data('suffix');
+
+		if (typeof price === 'undefined' || price === '') {
+			return; // Skip if no price data
+		}
+
 		var iconStyle = bitcoinPriceData.faIconColor ? ' style="color: ' + bitcoinPriceData.faIconColor + ';"' : '';
 		var iconClass = bitcoinPriceData.faIcon + (bitcoinPriceData.faIconAnimation ? ' ' + bitcoinPriceData.faIconAnimation : '');
 		var iconHtml = bitcoinPriceData.faIcon ? '<i class="' + iconClass + '"' + iconStyle + '></i> ' : '';
-		return iconHtml + bitcoinPriceData.prefix + ' ' + Number(price).toLocaleString() + ' ' + bitcoinPriceData.suffix;
-	}
+		
+		var formattedPrice = iconHtml + bitcoinPriceData.prefix + ' ' + price + ' ' + suffix;
+		$element.html(formattedPrice);
+	}	
 	
-    function updatePriceDisplay() {
-        if (displayMode === 'bitcoin_only' || (displayMode === 'toggle' && currentDisplay === 'bitcoin')) {
-            $('.price-wrapper .original-price').hide();
-            $('.price-wrapper .bitcoin-price').show();
-            $('.wc-bitcoin-price').each(function() {
-                var $this = $(this);
-                var price = $this.text();
-                $this.html(formatBitcoinPrice(price));
-            });
-        } else if (displayMode === 'both_prices') {
-            $('.price-wrapper .original-price, .price-wrapper .bitcoin-price').show();
-            $('.wc-bitcoin-price').each(function() {
-                var $this = $(this);
-                var price = $this.text();
-                $this.html(formatBitcoinPrice(price));
-            });
-            // Apply both prices option styles
-            switch (bitcoinPriceData.bothPricesOption) {
-                case 'before_inline':
-                case 'after_inline':
-                    $('.price-wrapper').css('display', 'inline');
-                    break;
-                case 'below':
-                case 'above':
-                    $('.price-wrapper').css('display', 'block');
-                    break;
-            }
-        } else {
-            $('.price-wrapper .original-price').show();
-            $('.price-wrapper .bitcoin-price').hide();
-        }
-    }
+	function updatePriceDisplay() {
+		if (displayMode === 'bitcoin_only' || (displayMode === 'toggle' && currentDisplay === 'bitcoin')) {
+			$('.price-wrapper .original-price').hide();
+			$('.price-wrapper .bitcoin-price').show();
+			$('.wc-bitcoin-price').each(function() {
+				formatBitcoinPrice(this);
+			});
+		} else if (displayMode === 'both_prices') {
+			$('.price-wrapper .original-price, .price-wrapper .bitcoin-price').show();
+			$('.wc-bitcoin-price').each(function() {
+				formatBitcoinPrice(this);
+			});
+			// Apply both prices option styles
+			switch (bitcoinPriceData.bothPricesOption) {
+				case 'before_inline':
+				case 'after_inline':
+					$('.price-wrapper').css('display', 'inline');
+					break;
+				case 'below':
+				case 'above':
+					$('.price-wrapper').css('display', 'block');
+					break;
+			}
+		} else {
+			$('.price-wrapper .original-price').show();
+			$('.price-wrapper .bitcoin-price').hide();
+		}
+	}
 	
     // Initial update
     updatePriceDisplay();
