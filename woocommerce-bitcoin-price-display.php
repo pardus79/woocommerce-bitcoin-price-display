@@ -120,197 +120,195 @@ class WC_Bitcoin_Price_Display {
         add_options_page('Bitcoin Price Display Settings', 'Bitcoin Price Display', 'manage_options', 'wc-bitcoin-price-display', array($this, 'settings_page'));
     }
 
-    public function register_settings() {
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_btcpay_server');
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_store_id');
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_api_key');
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_mode');
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_rounding');
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_both_prices_option');
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_sats_prefix', 'stripslashes');
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_sats_suffix', 'stripslashes');
+	public function register_settings() {
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_btcpay_server');
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_store_id');
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_api_key');
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_mode');
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_rounding');
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_both_prices_option');
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_sats_prefix', 'stripslashes');
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_sats_suffix', 'stripslashes');
 		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_fa_icon');
-		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_range_option');
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_rounding_thousand');
-        register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_thousand_suffix');
-    
-    }
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_fa_icon_color');
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_fa_icon_animation');
+	}
 
-    public function settings_page() {
-        if (isset($_POST['submit'])) {
-            check_admin_referer('wc_bitcoin_price_display_settings-options');
-            
-            $btcpay_server = isset($_POST['wc_bitcoin_price_display_btcpay_server']) ? sanitize_url($_POST['wc_bitcoin_price_display_btcpay_server']) : '';
-            $store_id = isset($_POST['wc_bitcoin_price_display_store_id']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_store_id']) : '';
-            $api_key = isset($_POST['wc_bitcoin_price_display_api_key']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_api_key']) : '';
-            $display_mode = isset($_POST['wc_bitcoin_price_display_mode']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_mode']) : 'toggle';
-            $rounding = isset($_POST['wc_bitcoin_price_display_rounding']) ? intval($_POST['wc_bitcoin_price_display_rounding']) : 1;
-            $both_prices_option = isset($_POST['wc_bitcoin_price_display_both_prices_option']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_both_prices_option']) : 'after_inline';
-            $sats_prefix = isset($_POST['wc_bitcoin_price_display_sats_prefix']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_sats_prefix']) : '~';
-            $sats_suffix = isset($_POST['wc_bitcoin_price_display_sats_suffix']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_sats_suffix']) : 'Sats';
-            $fa_icon = isset($_POST['wc_bitcoin_price_display_fa_icon']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_fa_icon']) : '';
-			$range_option = isset($_POST['wc_bitcoin_price_display_range_option']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_range_option']) : 'both';
-            $rounding_thousand = isset($_POST['wc_bitcoin_price_display_rounding_thousand']) ? '1' : '0';
-            $thousand_suffix = isset($_POST['wc_bitcoin_price_display_thousand_suffix']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_thousand_suffix']) : 'K';
-
-            
+	public function settings_page() {
+		if (isset($_POST['submit'])) {
+			check_admin_referer('wc_bitcoin_price_display_settings-options');
+			
+			$btcpay_server = isset($_POST['wc_bitcoin_price_display_btcpay_server']) ? sanitize_url($_POST['wc_bitcoin_price_display_btcpay_server']) : '';
+			$store_id = isset($_POST['wc_bitcoin_price_display_store_id']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_store_id']) : '';
+			$api_key = isset($_POST['wc_bitcoin_price_display_api_key']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_api_key']) : '';
+			$display_mode = isset($_POST['wc_bitcoin_price_display_mode']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_mode']) : 'toggle';
+			$rounding = isset($_POST['wc_bitcoin_price_display_rounding']) ? intval($_POST['wc_bitcoin_price_display_rounding']) : 1;
+			$both_prices_option = isset($_POST['wc_bitcoin_price_display_both_prices_option']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_both_prices_option']) : 'after_inline';
+			$sats_prefix = isset($_POST['wc_bitcoin_price_display_sats_prefix']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_sats_prefix']) : '~';
+			$sats_suffix = isset($_POST['wc_bitcoin_price_display_sats_suffix']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_sats_suffix']) : 'Sats';
+			$fa_icon = isset($_POST['wc_bitcoin_price_display_fa_icon']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_fa_icon']) : '';
+			$fa_icon_color = isset($_POST['wc_bitcoin_price_display_fa_icon_color']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_fa_icon_color']) : '';
+			$fa_icon_animation = isset($_POST['wc_bitcoin_price_display_fa_icon_animation']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_fa_icon_animation']) : '';
+			
+			update_option('wc_bitcoin_price_display_btcpay_server', $btcpay_server);
+			update_option('wc_bitcoin_price_display_store_id', $store_id);
+			update_option('wc_bitcoin_price_display_api_key', $api_key);
+			update_option('wc_bitcoin_price_display_mode', $display_mode);
+			update_option('wc_bitcoin_price_display_rounding', $rounding);
+			update_option('wc_bitcoin_price_display_both_prices_option', $both_prices_option);
+			update_option('wc_bitcoin_price_display_sats_prefix', $sats_prefix);
+			update_option('wc_bitcoin_price_display_sats_suffix', $sats_suffix);
 			update_option('wc_bitcoin_price_display_fa_icon', $fa_icon);
-            update_option('wc_bitcoin_price_display_btcpay_server', $btcpay_server);
-            update_option('wc_bitcoin_price_display_store_id', $store_id);
-            update_option('wc_bitcoin_price_display_api_key', $api_key);
-            update_option('wc_bitcoin_price_display_mode', $display_mode);
-            update_option('wc_bitcoin_price_display_rounding', $rounding);
-            update_option('wc_bitcoin_price_display_both_prices_option', $both_prices_option);
-            update_option('wc_bitcoin_price_display_sats_prefix', $sats_prefix);
-            update_option('wc_bitcoin_price_display_sats_suffix', $sats_suffix);
-			update_option('wc_bitcoin_price_display_range_option', $range_option);
-            update_option('wc_bitcoin_price_display_rounding_thousand', $rounding_thousand);
-            update_option('wc_bitcoin_price_display_thousand_suffix', $thousand_suffix);
-            
-            add_settings_error('wc_bitcoin_price_display_messages', 'wc_bitcoin_price_display_message', __('Settings Saved', 'wc-bitcoin-price-display'), 'updated');
-        }
-        
-        settings_errors('wc_bitcoin_price_display_messages');
-        
-        $btcpay_server = get_option('wc_bitcoin_price_display_btcpay_server', '');
-        $store_id = get_option('wc_bitcoin_price_display_store_id', '');
-        $api_key = get_option('wc_bitcoin_price_display_api_key', '');
-        $display_mode = get_option('wc_bitcoin_price_display_mode', 'toggle');
-        $rounding = get_option('wc_bitcoin_price_display_rounding', 1);
-        $both_prices_option = get_option('wc_bitcoin_price_display_both_prices_option', 'after_inline');
-        $sats_prefix = get_option('wc_bitcoin_price_display_sats_prefix', '~');
-        $sats_suffix = get_option('wc_bitcoin_price_display_sats_suffix', 'Sats');
-        $fa_icon = get_option('wc_bitcoin_price_display_fa_icon', 'fa-bitcoin');
-		$range_option = get_option('wc_bitcoin_price_display_range_option', 'both');
-        $rounding_thousand = get_option('wc_bitcoin_price_display_rounding_thousand', '0');
-        $thousand_suffix = get_option('wc_bitcoin_price_display_thousand_suffix', 'K');
-        
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-            <form action="options-general.php?page=wc-bitcoin-price-display" method="post">
-                <?php settings_fields('wc_bitcoin_price_display_settings'); ?>
-                <table class="form-table">
-                    <tr valign="top">
-                        <th scope="row">BTCPay Server Address</th>
-                        <td>
-                            <input type="text" name="wc_bitcoin_price_display_btcpay_server" value="<?php echo esc_attr($btcpay_server); ?>" class="regular-text" />
-                            <p class="description">Enter your BTCPay Server URL (including https:// but without a trailing slash).</p>
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Store ID</th>
-                        <td>
-                            <input type="text" name="wc_bitcoin_price_display_store_id" value="<?php echo esc_attr($store_id); ?>" class="regular-text" />
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">API Key</th>
-                        <td>
-                            <input type="password" name="wc_bitcoin_price_display_api_key" value="<?php echo esc_attr($api_key); ?>" class="regular-text" />
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Display Mode</th>
-                        <td>
-                            <select name="wc_bitcoin_price_display_mode">
-                                <option value="toggle" <?php selected($display_mode, 'toggle'); ?>>Toggle between original and Bitcoin</option>
-                                <option value="bitcoin_only" <?php selected($display_mode, 'bitcoin_only'); ?>>Bitcoin price only</option>
-                                <option value="both_prices" <?php selected($display_mode, 'both_prices'); ?>>Both Prices</option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Rounding</th>
-                        <td>
-                            <select name="wc_bitcoin_price_display_rounding">
-                                <option value="1" <?php selected($rounding, 1); ?>>1 Satoshi</option>
-                                <option value="10" <?php selected($rounding, 10); ?>>10 Satoshis</option>
-                                <option value="100" <?php selected($rounding, 100); ?>>100 Satoshis</option>
-                                <option value="1000" <?php selected($rounding, 1000); ?>>1,000 Satoshis</option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Both Prices Display Option</th>
-                        <td>
-                            <fieldset>
-                                <legend class="screen-reader-text"><span>Both Prices Display Option</span></legend>
-                                <p><strong>Choose how to display both prices:</strong></p>
-                                <label>
-                                    <input type="radio" name="wc_bitcoin_price_display_both_prices_option" value="after_inline" <?php checked($both_prices_option, 'after_inline'); ?>>
-                                    $10.00 / 30,000 sats
-                                </label><br>
-                                <label>
-                                    <input type="radio" name="wc_bitcoin_price_display_both_prices_option" value="before_inline" <?php checked($both_prices_option, 'before_inline'); ?>>
-                                    30,000 sats / $10.00
-                                </label><br>
-                                <label style="display: flex; align-items: center;">
-                                    <input type="radio" name="wc_bitcoin_price_display_both_prices_option" value="below" <?php checked($both_prices_option, 'below'); ?>>
-                                    <span style="display: inline-block; text-align: center; margin-left: 5px;">
-                                        $10.00<br>30,000 sats
-                                    </span>
-                                </label><br>
-                                <label style="display: flex; align-items: center;">
-                                    <input type="radio" name="wc_bitcoin_price_display_both_prices_option" value="above" <?php checked($both_prices_option, 'above'); ?>>
-                                    <span style="display: inline-block; text-align: center; margin-left: 5px;">
-                                        30,000 sats<br>$10.00
-                                    </span>
-                                </label>
-                            </fieldset>
-                        </td>
-                    </tr>
+			update_option('wc_bitcoin_price_display_fa_icon_color', $fa_icon_color);
+			update_option('wc_bitcoin_price_display_fa_icon_animation', $fa_icon_animation);
+			
+			add_settings_error('wc_bitcoin_price_display_messages', 'wc_bitcoin_price_display_message', __('Settings Saved', 'wc-bitcoin-price-display'), 'updated');
+		}
+		
+		settings_errors('wc_bitcoin_price_display_messages');
+		
+		$btcpay_server = get_option('wc_bitcoin_price_display_btcpay_server', '');
+		$store_id = get_option('wc_bitcoin_price_display_store_id', '');
+		$api_key = get_option('wc_bitcoin_price_display_api_key', '');
+		$display_mode = get_option('wc_bitcoin_price_display_mode', 'toggle');
+		$rounding = get_option('wc_bitcoin_price_display_rounding', 1);
+		$both_prices_option = get_option('wc_bitcoin_price_display_both_prices_option', 'after_inline');
+		$sats_prefix = get_option('wc_bitcoin_price_display_sats_prefix', '~');
+		$sats_suffix = get_option('wc_bitcoin_price_display_sats_suffix', 'Sats');
+		$fa_icon = get_option('wc_bitcoin_price_display_fa_icon', 'fa-bitcoin');
+		$fa_icon_color = get_option('wc_bitcoin_price_display_fa_icon_color', '');
+		$fa_icon_animation = get_option('wc_bitcoin_price_display_fa_icon_animation', '');
+		
+		?>
+		<div class="wrap">
+			<h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+			<form action="options-general.php?page=wc-bitcoin-price-display" method="post">
+				<?php settings_fields('wc_bitcoin_price_display_settings'); ?>
+				<table class="form-table">
+					<!-- Existing fields -->
 					<tr valign="top">
-                        <th scope="row">Price Range Display</th>
-                        <td>
-                            <select name="wc_bitcoin_price_display_range_option">
-                                <option value="both" <?php selected($range_option, 'both'); ?>>Show both prices</option>
-                                <option value="lowest" <?php selected($range_option, 'lowest'); ?>>Show lowest price with +</option>
-                            </select>
-                            <p class="description">Choose how to display price ranges for variable products.</p>
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Round to Nearest Thousand</th>
-                        <td>
-                            <input type="checkbox" name="wc_bitcoin_price_display_rounding_thousand" value="1" <?php checked($rounding_thousand, '1'); ?> />
-                            <p class="description">Round to the nearest thousand and remove trailing zeros.</p>
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Thousand Suffix</th>
-                        <td>
-                            <input type="text" name="wc_bitcoin_price_display_thousand_suffix" value="<?php echo esc_attr($thousand_suffix); ?>" />
-                            <p class="description">Suffix to denote thousands (e.g., "K" for 50K).</p>
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Sats Amount Prefix</th>
-                        <td>
-                            <input type="text" name="wc_bitcoin_price_display_sats_prefix" id="sats_prefix" value="<?php echo esc_attr(stripslashes($sats_prefix)); ?>" class="regular-text" />
-                            <p class="description">Enter the text or character to display before the sats amount (e.g., "~" or "approximately").</p>
-                        </td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Sats Amount Suffix</th>
-                        <td>
-                            <input type="text" name="wc_bitcoin_price_display_sats_suffix" id="sats_suffix" value="<?php echo esc_attr(stripslashes($sats_suffix)); ?>" class="regular-text" />
-                            <p class="description">Enter the text to display after the sats amount (e.g., "Sats" or "satoshis").</p>
-                        </td>
-                    </tr>
+						<th scope="row">BTCPay Server Address</th>
+						<td>
+							<input type="text" name="wc_bitcoin_price_display_btcpay_server" value="<?php echo esc_attr($btcpay_server); ?>" class="regular-text" />
+							<p class="description">Enter your BTCPay Server URL (including https:// but without a trailing slash).</p>
+						</td>
+					</tr>
 					<tr valign="top">
-                        <th scope="row">Font Awesome Icon</th>
-                        <td>
-                            <input type="text" name="wc_bitcoin_price_display_fa_icon" id="fa_icon" value="<?php echo esc_attr($fa_icon); ?>" class="regular-text" />
-                            <p class="description">Enter the Font Awesome icon class (e.g., 'fa-bitcoin' or 'fa-btc'). Make sure you have Font Awesome included in your theme.</p>
-                        </td>
-                    </tr>
-                </table>
-                <?php submit_button(); ?>
-            </form>
-        </div>
-        <?php
-    }
+						<th scope="row">Store ID</th>
+						<td>
+							<input type="text" name="wc_bitcoin_price_display_store_id" value="<?php echo esc_attr($store_id); ?>" class="regular-text" />
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">API Key</th>
+						<td>
+							<input type="password" name="wc_bitcoin_price_display_api_key" value="<?php echo esc_attr($api_key); ?>" class="regular-text" />
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">Display Mode</th>
+						<td>
+							<select name="wc_bitcoin_price_display_mode">
+								<option value="toggle" <?php selected($display_mode, 'toggle'); ?>>Toggle between original and Bitcoin</option>
+								<option value="bitcoin_only" <?php selected($display_mode, 'bitcoin_only'); ?>>Bitcoin price only</option>
+								<option value="both_prices" <?php selected($display_mode, 'both_prices'); ?>>Both Prices</option>
+							</select>
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">Rounding</th>
+						<td>
+							<select name="wc_bitcoin_price_display_rounding">
+								<option value="1" <?php selected($rounding, 1); ?>>1 Satoshi</option>
+								<option value="10" <?php selected($rounding, 10); ?>>10 Satoshis</option>
+								<option value="100" <?php selected($rounding, 100); ?>>100 Satoshis</option>
+								<option value="1000" <?php selected($rounding, 1000); ?>>1,000 Satoshis</option>
+							</select>
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">Both Prices Display Option</th>
+						<td>
+							<fieldset>
+								<legend class="screen-reader-text"><span>Both Prices Display Option</span></legend>
+								<p><strong>Choose how to display both prices:</strong></p>
+								<label>
+									<input type="radio" name="wc_bitcoin_price_display_both_prices_option" value="after_inline" <?php checked($both_prices_option, 'after_inline'); ?>>
+									$10.00 / 30,000 sats
+								</label><br>
+								<label>
+									<input type="radio" name="wc_bitcoin_price_display_both_prices_option" value="before_inline" <?php checked($both_prices_option, 'before_inline'); ?>>
+									30,000 sats / $10.00
+								</label><br>
+								<label style="display: flex; align-items: center;">
+									<input type="radio" name="wc_bitcoin_price_display_both_prices_option" value="below" <?php checked($both_prices_option, 'below'); ?>>
+									<span style="display: inline-block; text-align: center; margin-left: 5px;">
+										$10.00<br>30,000 sats
+									</span>
+								</label><br>
+								<label style="display: flex; align-items: center;">
+									<input type="radio" name="wc_bitcoin_price_display_both_prices_option" value="above" <?php checked($both_prices_option, 'above'); ?>>
+									<span style="display: inline-block; text-align: center; margin-left: 5px;">
+										30,000 sats<br>$10.00
+									</span>
+								</label>
+							</fieldset>
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">Sats Amount Prefix</th>
+						<td>
+							<input type="text" name="wc_bitcoin_price_display_sats_prefix" id="sats_prefix" value="<?php echo esc_attr(stripslashes($sats_prefix)); ?>" class="regular-text" />
+							<p class="description">Enter the text or character to display before the sats amount (e.g., "~" or "approximately").</p>
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">Sats Amount Suffix</th>
+						<td>
+							<input type="text" name="wc_bitcoin_price_display_sats_suffix" id="sats_suffix" value="<?php echo esc_attr(stripslashes($sats_suffix)); ?>" class="regular-text" />
+							<p class="description">Enter the text to display after the sats amount (e.g., "Sats" or "satoshis").</p>
+						</td>
+					</tr>
+					<!-- New fields for Font Awesome icon styling -->
+					<tr valign="top">
+						<th scope="row">Font Awesome Icon</th>
+						<td>
+							<input type="text" name="wc_bitcoin_price_display_fa_icon" id="fa_icon" value="<?php echo esc_attr($fa_icon); ?>" class="regular-text" />
+							<p class="description">
+								Enter the full Font Awesome icon class. For the circular Bitcoin symbol, use 'fa-brands fa-bitcoin'. 
+								Other options include 'fa-solid fa-bitcoin-sign' or 'fa-brands fa-btc' for the B symbol. 
+								Make sure you include both the style prefix (e.g., 'fa-brands' or 'fa-solid') and the icon name.
+							</p>
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">Icon Color</th>
+						<td>
+							<input type="text" name="wc_bitcoin_price_display_fa_icon_color" id="fa_icon_color" value="<?php echo esc_attr($fa_icon_color); ?>" class="regular-text" />
+							<p class="description">Enter a color for the icon (e.g., '#ff8000' or 'orange'). Leave blank for default color.</p>
+						</td>
+					</tr>
+					<tr valign="top">
+						<th scope="row">Icon Animation</th>
+						<td>
+							<select name="wc_bitcoin_price_display_fa_icon_animation" id="fa_icon_animation">
+								<option value="" <?php selected($fa_icon_animation, ''); ?>>None</option>
+								<option value="fa-spin" <?php selected($fa_icon_animation, 'fa-spin'); ?>>Spin</option>
+								<option value="fa-pulse" <?php selected($fa_icon_animation, 'fa-pulse'); ?>>Pulse</option>
+								<option value="fa-flip" <?php selected($fa_icon_animation, 'fa-flip'); ?>>Flip</option>
+								<option value="fa-beat" <?php selected($fa_icon_animation, 'fa-beat'); ?>>Beat</option>
+								<option value="fa-bounce" <?php selected($fa_icon_animation, 'fa-bounce'); ?>>Bounce</option>
+								<option value="fa-shake" <?php selected($fa_icon_animation, 'fa-shake'); ?>>Shake</option>
+							</select>
+							<p class="description">Select an animation for the icon.</p>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button(); ?>
+			</form>
+		</div>
+		<?php
+	}
 
     private function load_settings() {
         $this->btcpay_server = get_option('wc_bitcoin_price_display_btcpay_server');
@@ -319,11 +317,6 @@ class WC_Bitcoin_Price_Display {
     }
 	
 	public function enqueue_scripts() {
-		
-		if (is_admin()) {
-			return;
-		}
-		
 		if (is_woocommerce() || is_cart() || is_checkout() || is_product() || is_shop() || is_front_page()) {
 			wp_enqueue_script('jquery');
 			$script_url = plugin_dir_url(__FILE__) . 'js/bitcoin-price-toggle.js';
@@ -337,15 +330,20 @@ class WC_Bitcoin_Price_Display {
 				'displayMode' => $display_mode,
 				'prefix' => get_option('wc_bitcoin_price_display_sats_prefix', '~'),
 				'suffix' => get_option('wc_bitcoin_price_display_sats_suffix', 'Sats'),
-				'faIcon' => get_option('wc_bitcoin_price_display_fa_icon', 'fa-bitcoin'),
+				'faIcon' => get_option('wc_bitcoin_price_display_fa_icon', 'fa-brands fa-bitcoin'),
+				'faIconColor' => get_option('wc_bitcoin_price_display_fa_icon_color', ''),
+				'faIconAnimation' => get_option('wc_bitcoin_price_display_fa_icon_animation', ''),
+				'bothPricesOption' => get_option('wc_bitcoin_price_display_both_prices_option', 'after_inline'),
 				'ajaxUrl' => admin_url('admin-ajax.php'),
-				'nonce' => wp_create_nonce('bitcoin_price_toggle_nonce'),
-				'rangeOption' => $this->range_option,
-				'roundingThousand' => get_option('wc_bitcoin_price_display_rounding_thousand', '0') === '1',
-				'thousandSuffix' => get_option('wc_bitcoin_price_display_thousand_suffix', 'K'),
+				'nonce' => wp_create_nonce('bitcoin_price_toggle_nonce')
 			));
 			
 			wp_enqueue_style('bitcoin-price-display', plugin_dir_url(__FILE__) . 'css/bitcoin-price-display.css');
+			
+			// Enqueue Font Awesome if not already enqueued by the theme
+			if (!wp_style_is('font-awesome', 'enqueued')) {
+				wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+			}
 		}
 	}
 	
