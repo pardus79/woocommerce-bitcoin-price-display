@@ -2,7 +2,7 @@
 /*
 Plugin Name: WooCommerce Bitcoin Price Display
 Description: Displays prices in Bitcoin (sats) for WooCommerce products using BTCPay Server
-Version: 1.2
+Version: 1.3
 Author: BtcPins
 */
 
@@ -89,6 +89,8 @@ class WC_Bitcoin_Price_Display {
 		add_action('wp_ajax_nopriv_toggle_price_display', array($this, 'ajax_toggle_price_display'));
 		add_action('wp_ajax_update_bitcoin_prices', array($this, 'ajax_price_update'));
 		add_action('wp_ajax_nopriv_update_bitcoin_prices', array($this, 'ajax_price_update'));
+		add_action('update_option_wc_bitcoin_price_display_discount', array($this, 'clear_cache_on_discount_change'), 10, 3);
+
 
 		if (!isset($_SESSION['price_display'])) {
 			$_SESSION['price_display'] = 'bitcoin';
@@ -100,6 +102,24 @@ class WC_Bitcoin_Price_Display {
 		$this->range_option = get_option('wc_bitcoin_price_display_range_option', 'both');
 		$this->rounding_thousand = get_option('wc_bitcoin_price_display_rounding_thousand', '0');
 		$this->thousand_suffix = get_option('wc_bitcoin_price_display_thousand_suffix', 'K');
+		
+		// Initialize cache arrays
+		$this->formatted_sats_cache = [];
+		$this->variable_price_cache = [];
+		$this->cart_price_cache = [];
+		$this->subtotal_cache = [];
+		$this->total_cache = [];
+		$this->shipping_total_cache = [];
+		$this->price_including_tax_cache = [];
+		$this->cart_tax_total_cache = [];
+		$this->order_tax_totals_cache = [];
+		$this->cart_shipping_total_cache = [];
+		$this->order_shipping_total_cache = [];
+		$this->shipping_method_cache = [];
+		$this->shipping_rate_cost_cache = [];
+		$this->mini_cart_price_cache = [];
+		$this->mini_cart_item_cache = [];
+		$this->mini_cart_fragments_cache = [];
 	}
 	
 	public function remove_admin_price_filters() {
@@ -136,7 +156,12 @@ class WC_Bitcoin_Price_Display {
         register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_thousand_suffix');
 		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_fa_icon_color');
 		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_fa_icon_animation');
-    }
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_discount', 'floatval');
+		register_setting('wc_bitcoin_price_display_settings', 'wc_bitcoin_price_display_discount', array(
+			'type' => 'number',
+			'sanitize_callback' => array($this, 'sanitize_discount'),
+		));
+	}
 
     public function settings_page() {
         if (isset($_POST['submit'])) {
@@ -156,7 +181,8 @@ class WC_Bitcoin_Price_Display {
 			$fa_icon = isset($_POST['wc_bitcoin_price_display_fa_icon']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_fa_icon']) : '';
 			$fa_icon_color = isset($_POST['wc_bitcoin_price_display_fa_icon_color']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_fa_icon_color']) : '';
 			$fa_icon_animation = isset($_POST['wc_bitcoin_price_display_fa_icon_animation']) ? sanitize_text_field($_POST['wc_bitcoin_price_display_fa_icon_animation']) : '';
-
+			$discount = get_option('wc_bitcoin_price_display_discount', 0);
+			$discount = isset($_POST['wc_bitcoin_price_display_discount']) ? $this->sanitize_discount($_POST['wc_bitcoin_price_display_discount']) : 0;
             
             update_option('wc_bitcoin_price_display_btcpay_server', $btcpay_server);
             update_option('wc_bitcoin_price_display_store_id', $store_id);
@@ -172,7 +198,10 @@ class WC_Bitcoin_Price_Display {
 			update_option('wc_bitcoin_price_display_fa_icon', $fa_icon);
 			update_option('wc_bitcoin_price_display_fa_icon_color', $fa_icon_color);
 			update_option('wc_bitcoin_price_display_fa_icon_animation', $fa_icon_animation);
+			update_option('wc_bitcoin_price_display_discount', $discount);
             
+			$this->clear_rate_cache();
+			
             add_settings_error('wc_bitcoin_price_display_messages', 'wc_bitcoin_price_display_message', __('Settings Saved', 'wc-bitcoin-price-display'), 'updated');
         }
         
@@ -339,6 +368,12 @@ class WC_Bitcoin_Price_Display {
 							<p class="description">Select an animation for the icon.</p>
 						</td>
 					</tr>
+					<tr valign="top">
+						<th scope="row">Bitcoin Discount (%)</th>
+						<td>
+							<input type="number" name="wc_bitcoin_price_display_discount" value="<?php echo esc_attr($discount); ?>" class="small-text" step="0.01" min="0" max="100" />							<p class="description">Enter the percentage discount for Bitcoin payments (0-100). Leave empty for no discount.</p>
+						</td>
+					</tr>
                 </table>
                 <?php submit_button(); ?>
             </form>
@@ -381,6 +416,11 @@ class WC_Bitcoin_Price_Display {
 				wp_enqueue_style('font-awesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 			}
 		}
+	}
+	
+	public function sanitize_discount($input) {
+		$value = floatval($input);
+		return min(max($value, 0), 100); // Ensures the value is between 0 and 100
 	}
 	
     public function ajax_price_update() {
@@ -432,9 +472,19 @@ class WC_Bitcoin_Price_Display {
         wp_send_json_success(array('display' => $new_display, 'button_text' => $button_text));
     }
 
+	private $formatted_sats_cache = [];
+
 	public function format_sats($sats) {
-		if ($sats === 'N/A') {
-			return 'N/A';
+		// Check cache first
+		if (isset($this->formatted_sats_cache[$sats])) {
+			return $this->formatted_sats_cache[$sats];
+		}
+		
+		// Handle zero value
+		if ($sats === 0) {
+			$formatted_output = '0 ' . esc_html(get_option('wc_bitcoin_price_display_sats_suffix', 'Sats'));
+			$this->formatted_sats_cache[$sats] = $formatted_output;
+			return $formatted_output;
 		}
 		
 		$prefix = get_option('wc_bitcoin_price_display_sats_prefix', '~');
@@ -451,20 +501,24 @@ class WC_Bitcoin_Price_Display {
 			$formatted_sats = number_format($sats, 0, '.', ',');
 		}
 		
-		$output = '<span class="wc-bitcoin-price" data-sats="' . $formatted_sats . '" data-suffix="' . esc_attr($suffix) . '">';
+		$output = '<span class="wc-bitcoin-price" data-sats="' . esc_attr($sats) . '" data-suffix="' . esc_attr($suffix) . '">';
 		if (!empty($fa_icon)) {
 			$output .= '<i class="fa ' . esc_attr($fa_icon) . '"></i> ';
 		}
 		$output .= '<span class="bitcoin-amount">' . esc_html($prefix) . ' ' . esc_html($formatted_sats) . ' ' . esc_html($suffix) . '</span>';
 		$output .= '</span>';
 		
+		// Cache and return the formatted output
+		$this->formatted_sats_cache[$sats] = $output;
 		return $output;
-	}
+	}	
 	
 	public function get_bitcoin_price() {
 		$cached_rate = get_transient($this->cache_key);
 		if ($cached_rate !== false) {
-			return $cached_rate;
+			$discounted_rate = $this->apply_discount($cached_rate);
+			error_log("Cached BTC Price: " . $cached_rate . ", Discounted: " . $discounted_rate);
+			return $discounted_rate;
 		}
 
 		$currency_pair = "BTC_{$this->shop_currency}";
@@ -477,8 +531,8 @@ class WC_Bitcoin_Price_Display {
 		);
 
 		$response = wp_remote_get($url, $args);
-
 		if (is_wp_error($response)) {
+			error_log("Error fetching BTC price: " . $response->get_error_message());
 			return false;
 		}
 
@@ -488,23 +542,40 @@ class WC_Bitcoin_Price_Display {
 		if (isset($data[0]['rate'])) {
 			$rate = floatval($data[0]['rate']);
 			set_transient($this->cache_key, $rate, $this->cache_expiration);
-			error_log("BTC Price: " . $rate); // Add this line for debugging
-			return $rate;
+			$discounted_rate = $this->apply_discount($rate);
+			error_log("Fetched BTC Price: " . $rate . ", Discounted: " . $discounted_rate);
+			return $discounted_rate;
 		}
 
+		error_log("Failed to fetch BTC price");
 		return false;
 	}
 
-    public function convert_to_sats($price) {
-        $btc_price = $this->get_bitcoin_price();
-        if ($btc_price === false) {
-            return 'N/A';
-        }
-        $btc_amount = $price / $btc_price;
-        $sats = round($btc_amount * 100000000); // Convert to satoshis
-        $rounding = get_option('wc_bitcoin_price_display_rounding', 1000);
-        return round($sats, -1 * strlen($rounding) + 1); // Round to nearest chosen value
-    }
+	private function apply_discount($rate) {
+		$discount = get_option('wc_bitcoin_price_display_discount', 0);
+		if ($discount > 0 && $discount <= 100) {
+			// Increase the rate to reduce the sats amount
+			return $rate / (1 - $discount / 100);
+		}
+		return $rate;
+	}	
+	
+	public function convert_to_sats($price) {
+		$btc_price = $this->get_bitcoin_price();
+		if ($btc_price === false) {
+			return 'N/A';
+		}
+		$btc_amount = $price / $btc_price;
+		$sats = $btc_amount * 100000000; // Convert to satoshis
+		$rounding = get_option('wc_bitcoin_price_display_rounding', 1);
+		return round($sats, -1 * strlen($rounding) + 1); // Round to nearest chosen value
+	}
+	
+	public function clear_cache_on_discount_change($old_value, $new_value, $option) {
+		if ($option === 'wc_bitcoin_price_display_discount' && $old_value !== $new_value) {
+			$this->clear_rate_cache();
+		}
+	}
 	
     public function get_current_price_display() {
         $display_mode = get_option('wc_bitcoin_price_display_mode', 'toggle');
@@ -559,8 +630,16 @@ class WC_Bitcoin_Price_Display {
 		}
 	}
 	
+	private $shipping_method_cache = [];
+
 	public function add_bitcoin_shipping($method_label, $method) {
 		if ($method instanceof WC_Shipping_Rate) {
+			$cache_key = md5($method->get_id() . $method->get_cost() . get_option('wc_bitcoin_price_display_mode', 'toggle'));
+			
+			if (isset($this->shipping_method_cache[$cache_key])) {
+				return $this->shipping_method_cache[$cache_key];
+			}
+			
 			$cost = $method->get_cost();
 			if ($cost > 0) {
 				$sats = $this->convert_to_sats($cost);
@@ -568,36 +647,71 @@ class WC_Bitcoin_Price_Display {
 				$display_mode = get_option('wc_bitcoin_price_display_mode', 'toggle');
 				
 				if ($display_mode === 'bitcoin_only') {
-					return $method->get_label() . ': ' . $bitcoin_price;
+					$formatted_label = $method->get_label() . ': ' . $bitcoin_price;
 				} else {
 					$formatted_price = $this->format_price($cost, $bitcoin_price);
-					return $method->get_label() . ': ' . $formatted_price;
+					$formatted_label = $method->get_label() . ': ' . $formatted_price;
 				}
+				
+				$this->shipping_method_cache[$cache_key] = $formatted_label;
+				return $formatted_label;
 			}
 		}
 		return $method_label;
 	}
 	
-    public function modify_shipping_rate_cost($cost, $shipping_rate) {
-        if ($shipping_rate instanceof WC_Shipping_Rate) {
-            $sats = $this->convert_to_sats($cost);
-            $bitcoin_price = $this->format_sats($sats);
-            $shipping_rate->add_meta_data('bitcoin_price', $bitcoin_price);
-        }
-        return $cost;
-    }
+	private $shipping_rate_cost_cache = [];
+
+	public function modify_shipping_rate_cost($cost, $shipping_rate) {
+		if ($shipping_rate instanceof WC_Shipping_Rate) {
+			$cache_key = md5($shipping_rate->get_id() . $cost);
+			
+			if (isset($this->shipping_rate_cost_cache[$cache_key])) {
+				$shipping_rate->add_meta_data('bitcoin_price', $this->shipping_rate_cost_cache[$cache_key]);
+				return $cost;
+			}
+			
+			$sats = $this->convert_to_sats($cost);
+			$bitcoin_price = $this->format_sats($sats);
+			$shipping_rate->add_meta_data('bitcoin_price', $bitcoin_price);
+			
+			$this->shipping_rate_cost_cache[$cache_key] = $bitcoin_price;
+		}
+		return $cost;
+	}
 	
-    public function add_bitcoin_shipping_total($total) {
-        $shipping_total = WC()->cart->get_shipping_total();
-        $taxes = WC()->cart->get_shipping_tax();
-        $total_with_tax = $shipping_total + $taxes;
-        
-        $sats = $this->convert_to_sats($total_with_tax);
-        $bitcoin_price = $this->format_sats($sats);
-        return $this->format_price($total_with_tax, $bitcoin_price);
-    }
+	private $shipping_total_cache = [];
+
+	public function add_bitcoin_shipping_total($total) {
+		$cart = WC()->cart;
+		$cache_key = md5($cart->get_cart_hash() . $cart->get_shipping_total() . $cart->get_shipping_tax());
+		
+		if (isset($this->shipping_total_cache[$cache_key])) {
+			return $this->shipping_total_cache[$cache_key];
+		}
+		
+		$shipping_total = $cart->get_shipping_total();
+		$taxes = $cart->get_shipping_tax();
+		$total_with_tax = $shipping_total + $taxes;
+		
+		$sats = $this->convert_to_sats($total_with_tax);
+		$bitcoin_price = $this->format_sats($sats);
+		$formatted_total = $this->format_price($total_with_tax, $bitcoin_price);
+		
+		$this->shipping_total_cache[$cache_key] = $formatted_total;
+		
+		return $formatted_total;
+	}
 	
+	private $shipping_methods_cache = [];
+
 	public function add_bitcoin_to_available_shipping_methods($methods) {
+		$cache_key = md5(serialize($methods) . get_option('wc_bitcoin_price_display_mode', 'toggle'));
+		
+		if (isset($this->shipping_methods_cache[$cache_key])) {
+			return $this->shipping_methods_cache[$cache_key];
+		}
+		
 		$display_mode = get_option('wc_bitcoin_price_display_mode', 'toggle');
 		foreach ($methods as $method) {
 			if ($method->cost > 0) {
@@ -611,24 +725,31 @@ class WC_Bitcoin_Price_Display {
 				}
 			}
 		}
+		
+		$this->shipping_methods_cache[$cache_key] = $methods;
+		
 		return $methods;
 	}
 	
+	private $variable_price_cache = [];
+	
 	public function add_bitcoin_price($price_html, $product) {
+		$product_id = $product->get_id();
+		
+		if (isset($this->variable_price_cache[$product_id])) {
+			return $this->variable_price_cache[$product_id];
+		}
+		
 		$display_mode = get_option('wc_bitcoin_price_display_mode', 'toggle');
 		$range_option = get_option('wc_bitcoin_price_display_range_option', 'both');
-
 		if ($product->is_type('variable')) {
 			$prices = $product->get_variation_prices(true);
 			$min_price = current($prices['price']);
 			$max_price = end($prices['price']);
-
 			$min_sats = $this->convert_to_sats($min_price);
 			$max_sats = $this->convert_to_sats($max_price);
-
 			$bitcoin_price = '';
 			$original_price = '';
-
 			if ($min_price === $max_price) {
 				// If min and max prices are the same, show only one price
 				$bitcoin_price = $this->format_sats($min_sats);
@@ -650,33 +771,72 @@ class WC_Bitcoin_Price_Display {
 					}
 				}
 			}
-
-			return $this->format_price($original_price, $bitcoin_price);
 		} else {
+			// For simple products
 			$price = $product->get_price();
 			$sats = $this->convert_to_sats($price);
 			$bitcoin_price = $this->format_sats($sats);
-			return $this->format_price($price, $bitcoin_price);
+			$original_price = wc_price($price);
 		}
+		
+		$formatted_price = $this->format_price($original_price, $bitcoin_price);
+		
+		if ($product->is_type('variable')) {
+			$this->variable_price_cache[$product_id] = $formatted_price;
+		}
+
+		return $formatted_price;
 	}
 	
-    public function add_bitcoin_price_cart($price_html, $cart_item, $cart_item_key) {
-        $price = $cart_item['line_subtotal'];
-        $sats = $this->convert_to_sats($price);
-        $bitcoin_price = $this->format_sats($sats);
-        return $this->format_price($price, $bitcoin_price);
-    }
+	private $cart_price_cache = [];
 
-    public function add_bitcoin_subtotal($subtotal, $compound, $cart) {
-        $current_currency_subtotal = $cart->get_subtotal();
-        $sats = $this->convert_to_sats($current_currency_subtotal);
-        $bitcoin_subtotal = $this->format_sats($sats);
-        return $this->format_price($current_currency_subtotal, $bitcoin_subtotal);
-    }
+	public function add_bitcoin_price_cart($price_html, $cart_item, $cart_item_key) {
+		$cache_key = md5($cart_item_key . $cart_item['line_subtotal']);
+		
+		if (isset($this->cart_price_cache[$cache_key])) {
+			return $this->cart_price_cache[$cache_key];
+		}
+		
+		$price = $cart_item['line_subtotal'];
+		$sats = $this->convert_to_sats($price);
+		$bitcoin_price = $this->format_sats($sats);
+		$formatted_price = $this->format_price($price, $bitcoin_price);
+		
+		$this->cart_price_cache[$cache_key] = $formatted_price;
+		
+		return $formatted_price;
+	}
+
+	private $subtotal_cache = [];
+
+	public function add_bitcoin_subtotal($subtotal, $compound, $cart) {
+		$cache_key = md5($cart->get_cart_hash() . $compound . $cart->get_subtotal());
+		
+		if (isset($this->subtotal_cache[$cache_key])) {
+			return $this->subtotal_cache[$cache_key];
+		}
+		
+		$current_currency_subtotal = $cart->get_subtotal();
+		$sats = $this->convert_to_sats($current_currency_subtotal);
+		$bitcoin_subtotal = $this->format_sats($sats);
+		$formatted_subtotal = $this->format_price($current_currency_subtotal, $bitcoin_subtotal);
+		
+		$this->subtotal_cache[$cache_key] = $formatted_subtotal;
+		
+		return $formatted_subtotal;
+	}
+
+	private $price_including_tax_cache = [];
 
 	public function add_bitcoin_to_price_including_tax($price_html, $product) {
 		if (!$product || !is_a($product, 'WC_Product')) {
 			return $price_html; // Return original price if product is invalid
+		}
+
+		$cache_key = md5($product->get_id() . '_' . $product->get_price() . '_' . get_option('wc_bitcoin_price_display_mode', 'toggle'));
+
+		if (isset($this->price_including_tax_cache[$cache_key])) {
+			return $this->price_including_tax_cache[$cache_key];
 		}
 
 		try {
@@ -684,111 +844,226 @@ class WC_Bitcoin_Price_Display {
 			if ($price === false || $price === '') {
 				return $price_html; // Return original price if unable to get price
 			}
-			
+
 			$sats = $this->convert_to_sats($price);
 			$bitcoin_price = $this->format_sats($sats);
-			return $this->format_price($price, $bitcoin_price);
+			$formatted_price = $this->format_price($price, $bitcoin_price);
+
+			$this->price_including_tax_cache[$cache_key] = $formatted_price;
+
+			return $formatted_price;
 		} catch (Exception $e) {
 			error_log('Error in add_bitcoin_to_price_including_tax: ' . $e->getMessage());
 			return $price_html; // Return original price on error
 		}
 	}
 
-    public function add_bitcoin_cart_tax_total($tax_total) {
-        $cart_tax = WC()->cart->get_taxes_total();
-        $sats = $this->convert_to_sats($cart_tax);
-        $bitcoin_tax = $this->format_sats($sats);
-        return $this->format_price($cart_tax, $bitcoin_tax);
+	private $cart_tax_total_cache = [];
+
+	public function add_bitcoin_cart_tax_total($tax_total) {
+		$cart = WC()->cart;
+		$cache_key = md5($cart->get_cart_hash() . $cart->get_taxes_total());
+		
+		if (isset($this->cart_tax_total_cache[$cache_key])) {
+			return $this->cart_tax_total_cache[$cache_key];
+		}
+		
+		$cart_tax = $cart->get_taxes_total();
+		$sats = $this->convert_to_sats($cart_tax);
+		$bitcoin_tax = $this->format_sats($sats);
+		$formatted_tax_total = $this->format_price($cart_tax, $bitcoin_tax);
+		
+		$this->cart_tax_total_cache[$cache_key] = $formatted_tax_total;
+		
+		return $formatted_tax_total;
 	}
 
-    public function add_bitcoin_order_tax_totals($tax_totals_html, $order) {
-        $tax_totals = $order->get_tax_totals();
-        if (!empty($tax_totals)) {
-            $tax_totals_html = '';
-            foreach ($tax_totals as $code => $tax) {
-                $original_amount = $tax->amount;
-                $sats = $this->convert_to_sats($original_amount);
-                $bitcoin_amount = $this->format_sats($sats);
-                $formatted_amount = $this->format_price($original_amount, $bitcoin_amount);
-                $tax_totals_html .= '<tr class="tax-rate tax-rate-' . esc_attr(sanitize_title($code)) . '">';
-                $tax_totals_html .= '<th>' . esc_html($tax->label) . '</th>';
-                $tax_totals_html .= '<td>' . $formatted_amount . '</td>';
-                $tax_totals_html .= '</tr>';
-            }
-        }
-        return $tax_totals_html;
-    }
+private $order_tax_totals_cache = [];
 
-    public function add_bitcoin_total($total) {
-        // Get the total in the shop's current currency
-        $current_currency_total = WC()->cart->get_total('');
-        $sats = $this->convert_to_sats($current_currency_total);
-        $bitcoin_total = $this->format_sats($sats);
-        return $this->format_price($current_currency_total, $bitcoin_total);
-    }
+	public function add_bitcoin_order_tax_totals($tax_totals_html, $order) {
+		$cache_key = md5($order->get_id() . serialize($order->get_tax_totals()));
+		
+		if (isset($this->order_tax_totals_cache[$cache_key])) {
+			return $this->order_tax_totals_cache[$cache_key];
+		}
+		
+		$tax_totals = $order->get_tax_totals();
+		if (!empty($tax_totals)) {
+			$tax_totals_html = '';
+			foreach ($tax_totals as $code => $tax) {
+				$original_amount = $tax->amount;
+				$sats = $this->convert_to_sats($original_amount);
+				$bitcoin_amount = $this->format_sats($sats);
+				$formatted_amount = $this->format_price($original_amount, $bitcoin_amount);
+				$tax_totals_html .= '<tr class="tax-rate tax-rate-' . esc_attr(sanitize_title($code)) . '">';
+				$tax_totals_html .= '<th>' . esc_html($tax->label) . '</th>';
+				$tax_totals_html .= '<td>' . $formatted_amount . '</td>';
+				$tax_totals_html .= '</tr>';
+			}
+		}
+		
+		$this->order_tax_totals_cache[$cache_key] = $tax_totals_html;
+		
+		return $tax_totals_html;
+	}
 
-    public function update_mini_cart_price($price_html, $product) {
-        if (is_a($product, 'WC_Product')) {
-            $price = $product->get_price();
-            $sats = $this->convert_to_sats($price);
-            $bitcoin_price = $this->format_sats($sats);
-            return $this->format_price($price, $bitcoin_price);
-        }
-        return $price_html;
-    }
+	private $total_cache = [];
 
-    public function filter_mini_cart_item_name($product_title, $cart_item, $cart_item_key) {
-        $product = $cart_item['data'];
-        $quantity = $cart_item['quantity'];
-        $price = $product->get_price() * $quantity;
-        $sats = $this->convert_to_sats($price);
-        $bitcoin_price = $this->format_sats($sats);
-        
-        $formatted_price = $this->format_price($price, $bitcoin_price);
-        
-        return $product_title . ' <span class="quantity">× ' . $quantity . '</span> <span class="amount">' . $formatted_price . '</span>';
-    }
+	public function add_bitcoin_total($total) {
+		$cart = WC()->cart;
+		$cache_key = md5($cart->get_cart_hash() . $cart->get_total(''));
+		
+		if (isset($this->total_cache[$cache_key])) {
+			return $this->total_cache[$cache_key];
+		}
+		
+		// Get the total in the shop's current currency
+		$current_currency_total = $cart->get_total('');
+		$sats = $this->convert_to_sats($current_currency_total);
+		$bitcoin_total = $this->format_sats($sats);
+		$formatted_total = $this->format_price($current_currency_total, $bitcoin_total);
+		
+		$this->total_cache[$cache_key] = $formatted_total;
+		
+		return $formatted_total;
+	}
 	
-    public function clear_rate_cache() {
-        delete_transient($this->cache_key);
-        error_log("Cleared Bitcoin rate cache due to currency change");
-    }
+	private $mini_cart_price_cache = [];
 
-    public function update_mini_cart_fragments($fragments) {
-        ob_start();
-        woocommerce_mini_cart();
-        $mini_cart = ob_get_clean();
+	public function update_mini_cart_price($price_html, $product) {
+		if (is_a($product, 'WC_Product')) {
+			$cache_key = md5($product->get_id() . $product->get_price());
+			
+			if (isset($this->mini_cart_price_cache[$cache_key])) {
+				return $this->mini_cart_price_cache[$cache_key];
+			}
+			
+			$price = $product->get_price();
+			$sats = $this->convert_to_sats($price);
+			$bitcoin_price = $this->format_sats($sats);
+			$formatted_price = $this->format_price($price, $bitcoin_price);
+			
+			$this->mini_cart_price_cache[$cache_key] = $formatted_price;
+			
+			return $formatted_price;
+		}
+		return $price_html;
+	}
 
-        $fragments['div.widget_shopping_cart_content'] = '<div class="widget_shopping_cart_content">' . $mini_cart . '</div>';
+	private $mini_cart_item_cache = [];
 
-        // Update cart subtotal
-        $cart_subtotal = WC()->cart->get_cart_subtotal();
-        $sats_subtotal = $this->convert_to_sats(WC()->cart->get_subtotal());
-        $formatted_sats_subtotal = $this->format_sats($sats_subtotal);
+	public function filter_mini_cart_item_name($product_title, $cart_item, $cart_item_key) {
+		$cache_key = md5($cart_item_key . $cart_item['data']->get_id() . $cart_item['quantity'] . $cart_item['data']->get_price());
+		
+		if (isset($this->mini_cart_item_cache[$cache_key])) {
+			return $this->mini_cart_item_cache[$cache_key];
+		}
+		
+		$product = $cart_item['data'];
+		$quantity = $cart_item['quantity'];
+		$price = $product->get_price() * $quantity;
+		$sats = $this->convert_to_sats($price);
+		$bitcoin_price = $this->format_sats($sats);
+		
+		$formatted_price = $this->format_price($price, $bitcoin_price);
+		
+		$formatted_item = $product_title . ' <span class="quantity">× ' . $quantity . '</span> <span class="amount">' . $formatted_price . '</span>';
+		
+		$this->mini_cart_item_cache[$cache_key] = $formatted_item;
+		
+		return $formatted_item;
+	}
+	
+	public function clear_rate_cache() {
+		delete_transient($this->cache_key);
+		$this->formatted_sats_cache = [];
+		$this->variable_price_cache = [];
+		$this->cart_price_cache = [];
+		$this->subtotal_cache = [];
+		$this->total_cache = [];
+		$this->shipping_total_cache = [];
+		$this->price_including_tax_cache = [];
+		$this->cart_tax_total_cache = [];
+		$this->order_tax_totals_cache = [];
+		$this->cart_shipping_total_cache = [];
+		$this->order_shipping_total_cache = [];
+		$this->shipping_method_cache = [];
+		$this->shipping_rate_cost_cache = [];
+		$this->mini_cart_price_cache = [];
+		$this->mini_cart_item_cache = [];
+		$this->mini_cart_fragments_cache = [];
+		error_log("Cleared Bitcoin rate cache and all related caches due to currency change");
+	}
 
-        $fragments['p.woocommerce-mini-cart__total'] = '<p class="woocommerce-mini-cart__total total">' . 
-            sprintf(_x('Subtotal: %s', 'Cart subtotal', 'woocommerce'), $cart_subtotal) . 
-            ' <span class="wc-bitcoin-price">(' . $formatted_sats_subtotal . ')</span></p>';
+	private $mini_cart_fragments_cache = [];
 
-        return $fragments;
-    }
+	public function update_mini_cart_fragments($fragments) {
+		$cart = WC()->cart;
+		$cache_key = md5($cart->get_cart_hash() . $cart->get_cart_subtotal() . $cart->get_subtotal());
+		
+		if (isset($this->mini_cart_fragments_cache[$cache_key])) {
+			return $this->mini_cart_fragments_cache[$cache_key];
+		}
+		
+		ob_start();
+		woocommerce_mini_cart();
+		$mini_cart = ob_get_clean();
+		$fragments['div.widget_shopping_cart_content'] = '<div class="widget_shopping_cart_content">' . $mini_cart . '</div>';
 
-    public function add_bitcoin_cart_shipping_total($total) {
-        if (is_cart() || is_checkout()) {
-            $price = WC()->cart->get_shipping_total();
-            $sats = $this->convert_to_sats($price);
-            $bitcoin_price = $this->format_sats($sats);
-            return $this->format_price($price, $bitcoin_price);
-        }
-        return $total;
-    }
+		// Update cart subtotal
+		$cart_subtotal = $cart->get_cart_subtotal();
+		$sats_subtotal = $this->convert_to_sats($cart->get_subtotal());
+		$formatted_sats_subtotal = $this->format_sats($sats_subtotal);
+		$fragments['p.woocommerce-mini-cart__total'] = '<p class="woocommerce-mini-cart__total total">' . 
+			sprintf(_x('Subtotal: %s', 'Cart subtotal', 'woocommerce'), $cart_subtotal) . 
+			' <span class="wc-bitcoin-price">(' . $formatted_sats_subtotal . ')</span></p>';
 
-    public function add_bitcoin_order_shipping_total($total, $order) {
-        $price = $order->get_shipping_total();
-        $sats = $this->convert_to_sats($price);
-        $bitcoin_price = $this->format_sats($sats);
-        return $this->format_price($price, $bitcoin_price);
-    }
+		$this->mini_cart_fragments_cache[$cache_key] = $fragments;
+		
+		return $fragments;
+	}
+
+	private $cart_shipping_total_cache = [];
+
+	public function add_bitcoin_cart_shipping_total($total) {
+		if (is_cart() || is_checkout()) {
+			$cart = WC()->cart;
+			$cache_key = md5($cart->get_cart_hash() . $cart->get_shipping_total());
+			
+			if (isset($this->cart_shipping_total_cache[$cache_key])) {
+				return $this->cart_shipping_total_cache[$cache_key];
+			}
+			
+			$price = $cart->get_shipping_total();
+			$sats = $this->convert_to_sats($price);
+			$bitcoin_price = $this->format_sats($sats);
+			$formatted_total = $this->format_price($price, $bitcoin_price);
+			
+			$this->cart_shipping_total_cache[$cache_key] = $formatted_total;
+			
+			return $formatted_total;
+		}
+		return $total;
+	}
+
+	private $order_shipping_total_cache = [];
+
+	public function add_bitcoin_order_shipping_total($total, $order) {
+		$cache_key = md5($order->get_id() . $order->get_shipping_total());
+		
+		if (isset($this->order_shipping_total_cache[$cache_key])) {
+			return $this->order_shipping_total_cache[$cache_key];
+		}
+		
+		$price = $order->get_shipping_total();
+		$sats = $this->convert_to_sats($price);
+		$bitcoin_price = $this->format_sats($sats);
+		$formatted_total = $this->format_price($price, $bitcoin_price);
+		
+		$this->order_shipping_total_cache[$cache_key] = $formatted_total;
+		
+		return $formatted_total;
+	}
 }
 
 function initialize_wc_bitcoin_price_display() {
