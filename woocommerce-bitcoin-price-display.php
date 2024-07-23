@@ -825,6 +825,28 @@ class WC_Bitcoin_Price_Display {
 		
 		return $formatted_subtotal;
 	}
+	
+	private $tax_totals_cache = [];
+
+	public function add_bitcoin_tax_totals($tax_totals) {
+		$cart = WC()->cart;
+		$cache_key = md5($cart->get_cart_hash() . serialize($tax_totals));
+		
+		if (isset($this->tax_totals_cache[$cache_key])) {
+			return $this->tax_totals_cache[$cache_key];
+		}
+		
+		foreach ($tax_totals as $code => $tax) {
+			$original_amount = $tax->amount;
+			$sats = $this->convert_to_sats($original_amount);
+			$bitcoin_amount = $this->format_sats($sats);
+			$tax->formatted_amount = $this->format_price($original_amount, $bitcoin_amount);
+		}
+		
+		$this->tax_totals_cache[$cache_key] = $tax_totals;
+		
+		return $tax_totals;
+	}
 
 	private $price_including_tax_cache = [];
 
@@ -985,6 +1007,7 @@ private $order_tax_totals_cache = [];
 		$this->price_including_tax_cache = [];
 		$this->cart_tax_total_cache = [];
 		$this->order_tax_totals_cache = [];
+		$this->tax_totals_cache = [];
 		$this->cart_shipping_total_cache = [];
 		$this->order_shipping_total_cache = [];
 		$this->shipping_method_cache = [];

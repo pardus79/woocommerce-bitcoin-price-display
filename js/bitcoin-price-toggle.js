@@ -96,4 +96,22 @@ jQuery(document).ready(function($) {
     $(document).on('change', '.quantity .qty', function() {
         $(document.body).trigger('update_checkout');
     });
+	
+	// Check if we're on a WooCommerce page before accessing WC objects
+    if (typeof wc_checkout_params !== 'undefined') {
+        // Handle mini cart and other dynamic content updates
+        $(document.body).on('wc_fragments_loaded wc_fragments_refreshed updated_wc_div added_to_cart removed_from_cart updated_cart_totals updated_checkout', function() {
+            setTimeout(updatePriceDisplay, 100);
+        });
+
+        // Update prices when switching variations
+        $(document).on('found_variation', function(event, variation) {
+            setTimeout(updatePriceDisplay, 100);
+        });
+
+        // Recalculate prices on quantity change
+        $(document).on('change', '.quantity .qty', function() {
+            $(document.body).trigger('update_checkout');
+        });
+    }
 });
