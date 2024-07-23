@@ -52,10 +52,11 @@ Once configured, the plugin will automatically display Sats prices by default. C
 ## To-Do
 
 - [x] Support for variable-price products
-- [ ] Sats price to reflect discounts for Bitcoin payments
+- [x] Sats price to reflect discounts for Bitcoin payments
 - [ ] Display converted fiat price if store currency is BTC/SAT
 - [x] Customizable prefix/suffix text before/after Sats amount
 - [x] Font Awesome support for currency icons
+- [ ] Post-payment checkout screen prices
 
 ## Support
 
