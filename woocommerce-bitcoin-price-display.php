@@ -2,7 +2,7 @@
 /*
 Plugin Name: WooCommerce Bitcoin Price Display
 Description: Displays prices in Bitcoin (sats) for WooCommerce products using BTCPay Server
-Version: 1.3
+Version: 1.3.1
 Author: BtcPins
 */
 
