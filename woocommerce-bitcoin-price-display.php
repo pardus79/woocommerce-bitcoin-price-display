@@ -1278,3 +1278,137 @@ function initialize_wc_bitcoin_price_display() {
     $wc_bitcoin_price_display = new WC_Bitcoin_Price_Display();
 }
 add_action('plugins_loaded', 'initialize_wc_bitcoin_price_display');
+
+
+
+// Add donation fields to the checkout page
+add_action('woocommerce_review_order_before_payment', 'add_donation_fields_to_checkout');
+
+function add_donation_fields_to_checkout() {
+    echo '<div id="donation_field"><h3>' . __('Check the box(es) below and enter an amount to donate to great cause(s). 100% of your donation will go to the group(s).') . '</h3>';
+
+    // Checkbox and amount field for Samourai Defense Fund
+    woocommerce_form_field('donation_checkbox_1', array(
+        'type'          => 'checkbox',
+        'class'         => array('form-row-wide'),
+        'label'         => __('Donate to the Samourai Defense Fund'),
+    ), WC()->checkout->get_value('donation_checkbox_1'));
+
+    woocommerce_form_field('donation_amount_1', array(
+        'type'          => 'text',
+        'class'         => array('form-row-wide'),
+        'placeholder'   => __('Enter amount in sats'),
+        'custom_attributes' => array(
+            'pattern' => '[0-9.,]*',
+            'title'   => 'Enter a valid amount of sats',
+            'inputmode' => 'numeric'
+        ),
+    ), WC()->checkout->get_value('donation_amount_1'));
+
+    // Checkbox and amount field for Free Ross Foundation
+    woocommerce_form_field('donation_checkbox_2', array(
+        'type'          => 'checkbox',
+        'class'         => array('form-row-wide'),
+        'label'         => __('Donate to the Free Ross Foundation'),
+    ), WC()->checkout->get_value('donation_checkbox_2'));
+
+    woocommerce_form_field('donation_amount_2', array(
+        'type'          => 'text',
+        'class'         => array('form-row-wide'),
+        'placeholder'   => __('Enter amount in sats'),
+        'custom_attributes' => array(
+            'pattern' => '[0-9.,]*',
+            'title'   => 'Enter a valid amount of sats',
+            'inputmode' => 'numeric'
+        ),
+    ), WC()->checkout->get_value('donation_amount_2'));
+
+    echo '</div>';
+}
+
+// Validate the donation fields conditionally
+add_action('woocommerce_checkout_process', 'validate_donation_fields_conditionally');
+
+function validate_donation_fields_conditionally() {
+    // Validate Samourai Defense Fund
+    if (isset($_POST['donation_checkbox_1']) && $_POST['donation_checkbox_1'] == '1') {
+        if (empty($_POST['donation_amount_1']) || !preg_match('/^\d+([.,]\d+)?$/', $_POST['donation_amount_1'])) {
+            wc_add_notice(__('Please enter a valid amount to donate to the Samourai Defense Fund if you checked the box.'), 'error');
+        }
+    }
+
+    // Validate Free Ross Foundation
+    if (isset($_POST['donation_checkbox_2']) && $_POST['donation_checkbox_2'] == '1') {
+        if (empty($_POST['donation_amount_2']) || !preg_match('/^\d+([.,]\d+)?$/', $_POST['donation_amount_2'])) {
+            wc_add_notice(__('Please enter a valid amount to donate to the Free Ross Foundation if you checked the box.'), 'error');
+        }
+    }
+}
+
+// Save donation checkbox and amount values
+add_action('woocommerce_checkout_update_order_meta', 'save_donation_fields_value');
+
+function save_donation_fields_value($order_id) {
+    if (isset($_POST['donation_checkbox_1']) && $_POST['donation_checkbox_1'] == '1') {
+        update_post_meta($order_id, '_donation_checkbox_1', 'yes');
+        update_post_meta($order_id, '_donation_amount_1', sanitize_text_field($_POST['donation_amount_1']));
+    }
+    if (isset($_POST['donation_checkbox_2']) && $_POST['donation_checkbox_2'] == '1') {
+        update_post_meta($order_id, '_donation_checkbox_2', 'yes');
+        update_post_meta($order_id, '_donation_amount_2', sanitize_text_field($_POST['donation_amount_2']));
+    }
+}
+
+// Apply donation amount to the cart total
+add_action('woocommerce_cart_calculate_fees', 'add_donation_fee_to_cart');
+
+function add_donation_fee_to_cart() {
+    $total_donation = 0;
+    
+    // Check donation for Samourai Defense Fund
+    if (isset($_POST['donation_checkbox_1']) && $_POST['donation_checkbox_1'] == '1' && !empty($_POST['donation_amount_1'])) {
+        $donation_amount = floatval(str_replace(',', '.', $_POST['donation_amount_1']));
+        $total_donation += $donation_amount;
+    }
+    
+    // Check donation for Free Ross Foundation
+    if (isset($_POST['donation_checkbox_2']) && $_POST['donation_checkbox_2'] == '1' && !empty($_POST['donation_amount_2'])) {
+        $donation_amount = floatval(str_replace(',', '.', $_POST['donation_amount_2']));
+        $total_donation += $donation_amount;
+    }
+
+    // Add total donation amount to cart fees if there's any
+    if ($total_donation > 0) {
+        WC()->cart->add_fee(__('Total Donations', 'woocommerce'), $total_donation);
+    }
+}
+
+// Display donation details in the order admin panel
+add_action('woocommerce_admin_order_data_after_order_details', 'display_donation_details_in_order_admin');
+
+function display_donation_details_in_order_admin($order) {
+    $donation_checkbox_1 = get_post_meta($order->get_id(), '_donation_checkbox_1', true);
+    $donation_amount_1 = get_post_meta($order->get_id(), '_donation_amount_1', true);
+    $donation_checkbox_2 = get_post_meta($order->get_id(), '_donation_checkbox_2', true);
+    $donation_amount_2 = get_post_meta($order->get_id(), '_donation_amount_2', true);
+    
+    if ($donation_checkbox_1 === 'yes' && $donation_amount_1) {
+        echo '<p><strong>' . __('Donation to Samourai Defense Fund') . ':</strong> ' . wc_price($donation_amount_1) . '</p>';
+    }
+    if ($donation_checkbox_2 === 'yes' && $donation_amount_2) {
+        echo '<p><strong>' . __('Donation to Free Ross Foundation') . ':</strong> ' . wc_price($donation_amount_2) . '</p>';
+    }
+}
+
+// Remove optional from donation fields
+add_filter('woocommerce_form_field', 'remove_optional_text_from_donation_fields', 10, 4);
+
+function remove_optional_text_from_donation_fields($field, $key, $args, $value) {
+    // Check if the field is one of the donation amount fields
+    if ($key === 'donation_amount_1' || $key === 'donation_amount_2') {
+        // Remove "optional" text
+        $field = str_replace('<span class="optional">(optional)</span>', '', $field);
+    }
+    return $field;
+}
+
