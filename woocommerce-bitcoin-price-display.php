@@ -78,7 +78,7 @@ class WC_Bitcoin_Price_Display {
 			add_filter('woocommerce_package_rates', array($this, 'add_bitcoin_to_available_shipping_methods'), 100);
 			add_filter('woocommerce_cart_tax_totals', array($this, 'add_bitcoin_tax_totals'), 10, 1);
 			add_filter('woocommerce_cart_totals_taxes_total_html', array($this, 'add_bitcoin_cart_tax_total'), 10, 1);
-			add_filter('woocommerce_order_tax_totals', array($this, 'add_bitcoin_order_tax_totals'), 10, 2);
+			add_filter('woocommerce_order_get_tax_totals', array($this, 'add_bitcoin_order_get_tax_totals'), 10, 2);
 			add_filter('woocommerce_get_price_including_tax', array($this, 'add_bitcoin_to_price_including_tax'), 10, 2);
 			add_filter('woocommerce_cart_shipping_method_full_label', array($this, 'add_bitcoin_shipping'), 10, 2);
 		}
@@ -1029,6 +1029,18 @@ class WC_Bitcoin_Price_Display {
 		
 		$this->tax_totals_cache[$cache_key] = $tax_totals;
 		
+		return $tax_totals;
+	}
+
+	public function add_bitcoin_order_get_tax_totals($tax_totals, $order) {
+		if (!empty($tax_totals)) {
+			foreach ($tax_totals as $code => $tax) {
+				$original_amount = $tax->amount;
+				$sats = $this->convert_to_sats($original_amount);
+				$bitcoin_amount = $this->format_sats($sats);
+				$tax->formatted_amount = $this->format_price($original_amount, $bitcoin_amount);
+			}
+		}
 		return $tax_totals;
 	}
 
